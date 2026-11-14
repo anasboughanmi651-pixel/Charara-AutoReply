@@ -1,0 +1,1140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b10">
+<title>Charara AutoReply</title>
+<style>
+:root{
+  --bg:#0b0b10; --card:#15151d; --card2:#101017; --line:#262634; --text:#f3f3f8; --muted:#8c8ca1;
+  --red:#ff3b4e; --green:#2ecc71; --cyan:#35c6e8; --grad:linear-gradient(135deg,#ff3b4e,#35c6e8);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{display:flex;flex-direction:column;overflow:hidden}
+
+/* ---------- ÉCRAN D’ACCUEIL ---------- */
+#splash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 38%,#2a0f1f 0%,#0b0b10 62%);transition:opacity .6s ease,visibility .6s}
+#splash.hide{opacity:0;visibility:hidden}
+#splash svg{width:132px;height:132px;filter:drop-shadow(0 0 22px rgba(255,59,78,.45));animation:pop .9s cubic-bezier(.2,1.4,.4,1) both}
+#splash .ring{transform-origin:60px 60px;animation:spin 6s linear infinite}
+#splash h1{margin:22px 0 4px;font-size:22px;letter-spacing:.5px;animation:rise .8s .3s both;text-align:center;padding:0 16px}
+#splash p{margin:0;color:var(--muted);font-size:13px;animation:rise .8s .5s both}
+.loadbar{width:150px;height:4px;border-radius:4px;background:#1d1d29;margin-top:34px;overflow:hidden;animation:rise .8s .7s both}
+.loadbar i{display:block;height:100%;width:0;background:var(--grad);animation:load 2s .6s ease-out forwards}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes load{to{width:100%}}
+
+/* ---------- MISE EN PAGE ---------- */
+header{padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#14141d,#0b0b10)}
+header svg{width:30px;height:30px;flex:none}
+header h1{margin:0;font-size:15px;letter-spacing:.3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--card);
+  border:1px solid var(--line);border-radius:20px;padding:5px 10px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.off{background:var(--red)}
+main{flex:1;overflow-y:auto;padding:14px 16px 96px;-webkit-overflow-scrolling:touch}
+section{display:none;animation:fade .25s ease}
+section.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:14px;font-weight:650;color:var(--cyan);letter-spacing:.2px}
+.card p.sub{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.6}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px}
+input,textarea,select{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);
+  border-radius:11px;padding:12px;font-size:15px;font-family:inherit}
+textarea{min-height:150px;resize:vertical;line-height:1.6}
+input:focus,textarea:focus{outline:none;border-color:var(--cyan)}
+button{font-family:inherit;font-size:15px;border:0;border-radius:11px;padding:12px 14px;cursor:pointer;
+  background:var(--red);color:#fff;font-weight:650}
+button.grad{background:var(--grad)}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+button.small{padding:7px 11px;font-size:13px}
+button:active{opacity:.8;transform:scale(.99)}
+.btn{display:block;position:relative;overflow:hidden;text-align:center;border-radius:11px;padding:12px 14px;
+  font-size:15px;font-weight:650;color:#fff;cursor:pointer;background:var(--red)}
+.btn.grad{background:var(--grad)}
+.btn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.chips button{flex:none;background:var(--card2);border:1px solid var(--line);color:var(--muted);padding:7px 12px;font-size:13px;border-radius:20px}
+.chips button.sel{background:var(--grad);color:#fff;border-color:transparent}
+.egrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-height:240px;overflow-y:auto;margin-top:6px}
+.egrid button{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:4px;aspect-ratio:1;font-size:20px;color:var(--text)}
+.egrid img{width:100%;height:100%;object-fit:contain;display:block}
+.eprev{margin-top:8px;font-size:14px;line-height:2;color:var(--text)}
+.eprev img{width:22px;height:22px;vertical-align:middle;object-fit:contain}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.full{width:100%;margin-top:10px}
+.hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+.hero{text-align:center;padding:22px 15px;background:radial-gradient(circle at 50% 0%,#241225 0%,var(--card) 70%)}
+.orb{width:104px;height:104px;margin:0 auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:3px solid var(--muted);color:var(--muted);transition:.3s}
+.orb svg{width:46px;height:46px}
+.orb.on{border-color:var(--green);color:var(--green);box-shadow:0 0 0 0 rgba(46,204,113,.5);animation:pulse 2s infinite}
+.orb.off{border-color:var(--red);color:var(--red)}
+@keyframes pulse{70%{box-shadow:0 0 0 22px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+.hero h3{margin:0;font-size:20px}
+.hero small{display:block;margin:6px 0 14px;color:var(--muted);font-size:13px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--card2);border:1px solid var(--line);border-radius:13px;padding:13px 6px;text-align:center}
+.stat b{display:block;font-size:23px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat span{font-size:12px;color:var(--muted)}
+
+.imgbox{border:1px dashed var(--line);border-radius:13px;min-height:120px;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;background:var(--card2);margin-bottom:10px}
+.imgbox img{max-width:100%;max-height:260px;display:block}
+.imgbox span{color:var(--muted);font-size:13px;padding:20px;text-align:center}
+
+.seg{display:flex;gap:6px;margin:8px 0 4px}
+.seg button{flex:1;background:var(--card2);border:1px solid var(--line);color:var(--muted);padding:10px 0}
+.seg button.sel{background:var(--grad);color:#fff;border-color:transparent}
+.item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .ic{width:34px;height:34px;border-radius:10px;background:var(--card2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.item div{flex:1;min-width:0}
+.item b{display:block;font-size:14px}
+.item p{margin:2px 0 0;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-size:11px;background:var(--grad);color:#fff;border-radius:20px;padding:3px 8px;font-weight:650;flex:none}
+.empty{color:var(--muted);text-align:center;padding:14px 0;font-size:14px}
+
+.kw{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.kw:first-child{border-top:0}
+.kw div{flex:1;min-width:0}
+.kw b{color:var(--green);word-break:break-word}
+.kw p{margin:4px 0 0;color:var(--muted);font-size:13px;white-space:pre-wrap;word-break:break-word}
+.switch{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.switch input{width:auto;transform:scale(1.4)}
+
+details{border-top:1px solid var(--line);padding:11px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:650;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--cyan);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details p,details li{color:var(--muted);font-size:13px;line-height:1.75}
+details ul,details ol{margin:6px 0 0;padding-inline-start:20px}
+details b{color:var(--text)}
+
+.signature{margin:26px 0 8px;text-align:center;font-size:17px;letter-spacing:.5px;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.version{text-align:center;color:var(--muted);font-size:11px;margin-bottom:6px}
+
+nav{position:fixed;bottom:0;inset-inline:0;background:rgba(21,21,29,.96);border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:10}
+nav button{flex:1;background:transparent;color:var(--muted);border-radius:0;padding:9px 2px 8px;font-size:11px;font-weight:550}
+nav button svg{display:block;margin:0 auto 3px;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.active{color:var(--red)}
+
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#000;color:#fff;
+  border:1px solid var(--line);padding:10px 16px;border-radius:20px;font-size:14px;opacity:0;
+  pointer-events:none;transition:opacity .2s;max-width:90%;text-align:center;z-index:20}
+#toast.show{opacity:1}
+#toast.err{border-color:var(--red);color:#ffb3bb}
+#lock{position:fixed;inset:0;z-index:99;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:30px;text-align:center}
+#lock.on{display:flex}#lock input{text-align:center;font-size:22px;letter-spacing:8px;max-width:220px}
+#spark{width:100%;height:60px}.row2{display:flex;gap:8px}.row2>*{flex:1}
+</style>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b0b10">
+</head>
+<body>
+
+<!-- ======== ÉCRAN D’ACCUEIL ======== -->
+<div id="splash">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <defs><linearGradient id="gs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3b4e"/><stop offset="1" stop-color="#35c6e8"/></linearGradient></defs>
+    <g class="ring"><circle cx="60" cy="60" r="52" fill="none" stroke="url(#gs)" stroke-width="5" stroke-dasharray="230 97" stroke-linecap="round"/></g>
+    <polygon points="70,24 42,64 60,64 50,96 80,52 62,52" fill="url(#gs)"/>
+  </svg>
+  <h1>𝗖𝗵𝗮𝗿𝗮𝗿𝗮 𝗔𝘂𝘁𝗼𝗥𝗲𝗽𝗹𝘆</h1>
+  <p>Réponses automatiques Telegram</p>
+  <div class="loadbar"><i></i></div>
+</div>
+
+<header>
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <defs><linearGradient id="gh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3b4e"/><stop offset="1" stop-color="#35c6e8"/></linearGradient></defs>
+    <circle cx="60" cy="60" r="52" fill="none" stroke="url(#gh)" stroke-width="7"/>
+    <polygon points="70,24 42,64 60,64 50,96 80,52 62,52" fill="url(#gh)"/>
+  </svg>
+  <h1>𝗖𝗵𝗮𝗿𝗮𝗿𝗮 𝗔𝘂𝘁𝗼𝗥𝗲𝗽𝗹𝘆</h1>
+  <div class="pill"><span id="statusDot" class="dot"></span><span id="statusText">Hors ligne</span></div>
+</header>
+
+<main>
+
+  <!-- ACCUEIL -->
+  <section id="tab-home" class="active">
+    <div class="card hero">
+      <div id="orb" class="orb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+      </div>
+      <h3 id="heroTitle">Non connecté</h3>
+      <small id="heroSub">Ouvrez l’onglet Réglages pour vous connecter.</small>
+      <button id="powerBtn" class="grad full" style="margin-top:0">…</button>
+    </div>
+
+    <div class="card">
+      <h2>Statistiques</h2>
+      <div class="stats">
+        <div class="stat"><b id="stUsers">0</b><span>Personnes</span></div>
+        <div class="stat"><b id="stMsgs">0</b><span>Messages reçus</span></div>
+        <div class="stat"><b id="stReplies">0</b><span>Réponses</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Répondre toutes les (heures)</h2>
+      <div class="row">
+        <input id="cooldown" type="number" min="0" step="0.5" inputmode="decimal">
+        <button id="saveCooldown">Enregistrer</button>
+      </div>
+      <div class="hint">Chaque personne reçoit une seule réponse pendant cette durée.</div>
+      <button id="resetBtn" class="ghost full">Réinitialiser le délai pour tout le monde</button>
+    </div>
+    <div class="card"><h2>Messages reçus (activité)</h2>
+      <svg id="spark" viewBox="0 0 300 55" preserveAspectRatio="none"></svg>
+      <div class="hint">Courbe par tranche de 5 min, enregistrée sur ce téléphone pendant que l’application est ouverte.</div></div>
+  </section>
+
+  <!-- MESSAGE -->
+  <section id="tab-message">
+    <div class="card"><h2>Modèles de message</h2>
+      <select id="tplSel"></select>
+      <div class="row2" style="margin-top:8px"><button id="tplUse" class="grad">Utiliser</button><button id="tplDel" class="ghost">Supprimer</button></div>
+      <input id="tplName" placeholder="Nom du nouveau modèle" style="margin-top:8px">
+      <button id="tplSave" class="ghost full">Enregistrer le message actuel comme modèle</button></div>
+
+    <div class="card">
+      <h2>Message texte</h2>
+      <textarea id="autoMessage"></textarea>
+      <button id="emojiToggle" class="ghost full">⭐ Emojis premium</button>
+      <div id="emojiPanel" style="display:none;margin-top:10px">
+        <label style="display:flex;gap:8px;align-items:center"><input id="stdConv" type="checkbox" style="width:auto"> Convertir les emojis premium en emojis standard à l’enregistrement</label>
+        <div class="hint">Emojis standard (fonctionnent pour tout le monde, même sans Premium) :</div>
+        <div class="egrid" id="stdGrid"></div>
+        <div class="chips" id="emojiSets"></div>
+        <div class="egrid" id="emojiGrid"></div>
+        <div class="hint">Touchez un emoji pour l’ajouter au message (il apparaît sous la forme [[e:…]]). Il ne s’affichera chez les destinataires que si votre compte Telegram a Premium.</div>
+      </div>
+      <div class="eprev" id="emojiPreview" style="display:none"></div>
+      <button id="saveMessage" class="full">Enregistrer le message</button>
+    </div>
+
+    <div class="card">
+      <h2>Image en autocollant</h2>
+      <p class="sub">Choisissez une image dans votre galerie : elle sera envoyée <b>comme autocollant, avant le message</b>.</p>
+      <div class="imgbox" id="imgBox"><span>Aucune image</span></div>
+      <div class="row">
+        <label class="btn grad" id="pickImg">Choisir une image<input id="imgFile" type="file" accept="image/*"></label>
+        <button id="delImg" class="ghost">Retirer</button>
+      </div>
+      <div class="hint">Si la galerie ne s’ouvre pas : Réglages → « Accès aux photos ».</div>
+    </div>
+
+    <div class="card">
+      <h2>Emojis premium et autocollants</h2>
+      <p class="sub">
+        Le clavier Telegram n’existe pas dans cette application, alors on l’utilise directement dans Telegram :
+      </p>
+      <ol class="sub" style="margin:0 0 8px;padding-inline-start:20px;line-height:1.8">
+        <li>Ouvrez Telegram, puis <b>Messages enregistrés</b>.</li>
+        <li>Écrivez votre réponse avec le clavier Telegram : emojis premium, autocollants, photo, GIF…</li>
+        <li>Revenez ici, choisissez combien de derniers messages utiliser, puis appuyez sur <b>Importer</b>.</li>
+      </ol>
+      <label>Nombre de derniers messages à utiliser</label>
+      <div class="seg" id="seg">
+        <button data-n="1" class="sel">1</button><button data-n="2">2</button><button data-n="3">3</button>
+        <button data-n="4">4</button><button data-n="5">5</button>
+      </div>
+      <button id="importBtn" class="grad full">Importer depuis Telegram</button>
+
+      <div id="packBox" style="margin-top:12px"></div>
+      <button id="clearPack" class="ghost full" style="display:none">Supprimer l’import</button>
+      <div class="hint">
+        L’import remplace le message texte et l’image. Les emojis premium ne s’affichent que si votre compte Telegram a Premium.
+      </div>
+    </div>
+  </section>
+
+  <!-- MOTS-CLÉS -->
+  <section id="tab-keywords">
+    <div class="card">
+      <h2>Ajouter un mot-clé</h2>
+      <label for="kwWord">Mot-clé</label>
+      <input id="kwWord" placeholder="Exemple : prix">
+      <label for="kwResp">Réponse</label>
+      <textarea id="kwResp" style="min-height:90px" placeholder="Le texte qui sera envoyé"></textarea>
+      <button id="addKw" class="full">Ajouter</button>
+    </div>
+    <div class="card">
+      <h2>Mots-clés enregistrés</h2>
+      <div id="kwList"></div>
+    </div>
+  </section>
+
+  <!-- PLANNING -->
+  <section id="tab-schedule">
+    <div class="card">
+      <h2>Planning de fonctionnement</h2>
+      <div class="switch">
+        <span>Activer le planning</span>
+        <input id="schEnabled" type="checkbox">
+      </div>
+      <div class="row">
+        <div><label for="schStart">De</label><input id="schStart" type="time"></div>
+        <div><label for="schEnd">À</label><input id="schEnd" type="time"></div>
+      </div>
+      <button id="saveSchedule" class="full">Enregistrer le planning</button>
+      <div class="hint">En dehors de ces heures, le bot ne répond pas.</div>
+    </div>
+  
+    <div class="card"><h2>Planning par jour</h2>
+      <div class="hint" style="margin-bottom:8px">Décochez un jour pour que le bot ne réponde pas ce jour-là. Fonctionne si « Activer le planning » est coché.</div>
+      <div id="weekBox"></div>
+      <button id="saveWeek" class="full">Enregistrer le planning par jour</button></div>
+    <div class="card"><h2>Message d’absence</h2>
+      <textarea id="awayMsg" style="min-height:80px" placeholder="Envoyé en dehors des heures du planning (laisser vide = silence)"></textarea>
+      <button id="saveAway" class="full">Enregistrer</button></div>
+  </section>
+
+  <!-- RÉGLAGES -->
+  <section id="tab-logs">
+    <div class="card"><h2>Journal</h2>
+      <button id="logRefresh" class="grad full" style="margin-top:0">Actualiser</button>
+      <div id="logBox" style="margin-top:10px"></div></div>
+    <div class="card"><h2>Liste noire / blanche</h2>
+      <select id="listMode"><option value="off">Désactivée</option><option value="black">Liste noire : pas de réponse à ces personnes</option><option value="white">Liste blanche : réponse à ces personnes seulement</option></select>
+      <div class="row2" style="margin-top:8px"><input id="listUser" placeholder="@username ou ID"><button id="listAdd" class="grad">Ajouter</button></div>
+      <div id="listBox" style="margin-top:10px"></div></div>
+  </section>
+
+  <section id="tab-settings">
+
+    <div class="card">
+      <h2>Connexion au serveur</h2>
+      <label for="srvUrl">Adresse du serveur</label>
+      <input id="srvUrl" type="url" inputmode="url" placeholder="http://51.75.118.17:20014">
+      <label for="srvToken">Jeton (API_TOKEN)</label>
+      <input id="srvToken" type="password" placeholder="Votre mot de passe">
+      <button id="connectBtn" class="grad full">Se connecter</button>
+      <div class="hint">L’adresse et le jeton sont ceux de votre serveur (fichier app.py).</div>
+    </div>
+
+    <div class="card"><h2>Sécurité de l’application</h2>
+      <input id="pinNew" type="password" inputmode="numeric" maxlength="8" placeholder="Code PIN (4 à 8 chiffres)">
+      <div class="row2" style="margin-top:8px"><button id="pinSet" class="grad">Activer le PIN</button><button id="pinOff" class="ghost">Retirer</button></div></div>
+    <div class="card"><h2>Alertes</h2>
+      <label style="display:flex;gap:8px;align-items:center"><input id="notifOn" type="checkbox" style="width:auto"> M’alerter si la connexion au serveur est perdue</label></div>
+    <div class="card"><h2>Sauvegarde</h2>
+      <textarea id="bkBox" style="min-height:90px" placeholder="La sauvegarde (JSON) apparaît ici ; collez-en une pour restaurer"></textarea>
+      <div class="row2" style="margin-top:8px"><button id="bkOut" class="grad">Sauvegarder</button><button id="bkIn" class="ghost">Restaurer</button></div></div>
+
+    <div class="card">
+      <h2>Comment ça marche</h2>
+
+      <details open>
+        <summary>Le principe</summary>
+        <p>Le bot tourne en permanence sur votre serveur (Katabump) et répond automatiquement aux messages privés reçus sur votre compte Telegram. Cette application est la <b>télécommande</b> : elle change les réglages du bot à distance.</p>
+      </details>
+
+      <details>
+        <summary>Accueil</summary>
+        <ul>
+          <li><b>Activer / désactiver</b> les réponses automatiques.</li>
+          <li><b>Statistiques</b> : personnes, messages reçus, réponses envoyées.</li>
+          <li><b>Délai</b> : chaque personne reçoit une réponse toutes les X heures (5 par défaut), pas à chaque message.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Message, image, emojis premium</summary>
+        <ul>
+          <li><b>Message texte</b> : la réponse par défaut.</li>
+          <li><b>Image en autocollant</b> : une image de votre galerie, envoyée comme autocollant avant le message.</li>
+          <li><b>Emojis premium</b> : bouton « Emojis premium » sous le message, touchez un emoji pour l’ajouter.</li>
+          <li><b>Import Telegram</b> : préparez votre réponse dans « Messages enregistrés » (emojis premium, autocollants, photos), puis importez-la. Le bot renvoie une copie fidèle.</li>
+          <li>Si un import existe, il remplace le texte et l’image. Utilisez « Supprimer l’import » pour revenir au texte.</li>
+          <li>Les emojis premium ne s’affichent que si votre compte a Telegram Premium.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Mots-clés</summary>
+        <p>Si le message reçu contient un mot-clé, le bot envoie la réponse associée (texte seulement) au lieu du message par défaut.</p>
+      </details>
+
+      <details>
+        <summary>Planning</summary>
+        <p>Choisissez les heures pendant lesquelles le bot répond. L’heure utilisée est celle de la Tunisie (UTC+1), modifiable dans app.py (TIMEZONE_OFFSET_HOURS).</p>
+      </details>
+
+      <details>
+        <summary>Accès aux photos</summary>
+        <ul>
+          <li>L’application est un site emballé en APK : l’accès à la galerie dépend de l’outil qui a créé l’APK.</li>
+          <li>Sur le site de conversion, activez l’option de téléversement de fichiers / accès au stockage / galerie si elle existe, puis reconstruisez l’APK.</li>
+          <li>Sur le téléphone : Paramètres → Applications → l’application → Autorisations → Photos et médias (ou Fichiers) → Autoriser.</li>
+          <li>Sinon : envoyez l’autocollant dans « Messages enregistrés » sur Telegram, puis utilisez « Importer depuis Telegram ».</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Journal, listes, planning par jour, variables</summary>
+        <ul>
+          <li><b>Journal</b> : les 60 derniers messages reçus (📩) et réponses envoyées (📤). Le bouton 🚫 ajoute la personne à la liste.</li>
+          <li><b>Liste noire</b> : le bot ignore ces personnes. <b>Liste blanche</b> : il répond uniquement à elles. Ajout par @username (la personne doit avoir déjà écrit) ou par ID.</li>
+          <li><b>Planning par jour</b> (onglet Planning) : une ligne par jour avec ses heures ; décochez un jour pour le désactiver.</li>
+          <li><b>Message d’absence</b> : envoyé une fois par délai quand le planning est fermé. Vide = silence.</li>
+          <li><b>Variables</b> dans le message, les mots-clés et l’absence : {nom} prénom, {username} @pseudo, {heure} 14:30, {date} 14/11/2026.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Nouveautés : modèles, emojis standard, courbe</summary>
+        <ul>
+          <li><b>Modèles</b> (onglet Message) : écrivez un message, donnez un nom, « Enregistrer… ». Pour le réutiliser : choisissez-le puis « Utiliser » (il est envoyé au serveur tout de suite).</li>
+          <li><b>Emojis standard</b> : sous « Emojis premium », touchez un emoji pour l’ajouter. Ils s’affichent chez tout le monde.</li>
+          <li><b>Conversion</b> : cochez la case pour que chaque emoji premium devienne son emoji standard équivalent à l’enregistrement (aucun risque de ne pas s’afficher).</li>
+          <li><b>Courbe</b> (Accueil) : activité des messages reçus.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Réglages : PIN, alertes, sauvegarde</summary>
+        <ul>
+          <li><b>PIN</b> : saisissez 4 à 8 chiffres puis « Activer ». L’application se verrouille à chaque ouverture. C’est un verrou d’interface : il protège contre un regard rapide, pas contre un expert.</li>
+          <li><b>Alertes</b> : cochez la case ; si la connexion tombe, le téléphone vibre et un message s’affiche.</li>
+          <li><b>Sauvegarde</b> : « Sauvegarder » génère un texte JSON (message, délai, planning, mots-clés, modèles) à garder. « Restaurer » : collez-le dans la zone puis appuyez ; les mots-clés déjà présents sont ignorés.</li>
+          <li><b>Installation</b> : l’application peut s’installer (PWA) et affiche sa dernière interface sans internet.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Sécurité</summary>
+        <ul>
+          <li>Ne partagez jamais votre jeton, votre API_HASH ni le fichier .session.</li>
+          <li>Le fichier .session donne un accès complet à votre compte.</li>
+          <li>Pour changer le jeton, modifiez API_TOKEN dans app.py et redémarrez le serveur.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Dépannage</summary>
+        <ul>
+          <li><b>« Impossible de joindre le serveur »</b> : vérifiez que le serveur est en ligne et que le port est le bon.</li>
+          <li><b>« Jeton incorrect »</b> : le jeton doit être identique à API_TOKEN dans app.py.</li>
+          <li><b>L’import échoue</b> : le bot doit être connecté à Telegram et « Messages enregistrés » doit contenir votre message.</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="signature">𝗖𝗛𝗔𝗥𝗔𝗥𝗔 =&gt; 𝗕𝗔𝗖𝗞</div>
+    <div class="version">Charara AutoReply</div>
+  </section>
+
+</main>
+
+<div id="lock"><h2>🔒 Charara AutoReply</h2><input id="pinIn" type="password" inputmode="numeric" maxlength="8" placeholder="PIN"><button id="pinGo" class="grad">Déverrouiller</button></div>
+<div id="toast"></div>
+
+<nav>
+  <button data-tab="home" class="active">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>Accueil
+  </button>
+  <button data-tab="message">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Message
+  </button>
+  <button data-tab="keywords">
+    <svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/></svg>Mots-clés
+  </button>
+  <button data-tab="schedule">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Planning
+  </button>
+  <button data-tab="logs">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Journal
+  </button>
+  <button data-tab="settings">
+    <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Réglages
+  </button>
+</nav>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  var base = store.get("charara_url");
+  var token = store.get("charara_token");
+  var state = null;
+  var timer = null;
+  var importCount = 1;
+  var lastImgKb = -1;
+
+  /* ---------- écran d’accueil ---------- */
+  setTimeout(function () { $("splash").className = "hide"; }, 2600);
+
+  /* ---------- utilitaires ---------- */
+
+  function toast(msg, isErr) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.className = "show" + (isErr ? " err" : "");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { t.className = ""; }, 2600);
+  }
+
+  function errText(e) {
+    var m = (e && e.message) || "Erreur";
+    return m === "Failed to fetch" || m === "Load failed" || m === "NetworkError when attempting to fetch resource."
+      ? "Impossible de joindre le serveur" : m;
+  }
+
+  function showTab(name) {
+    var sections = document.querySelectorAll("main section");
+    for (var i = 0; i < sections.length; i++) {
+      sections[i].classList.toggle("active", sections[i].id === "tab-" + name);
+    }
+    var btns = document.querySelectorAll("nav button");
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].classList.toggle("active", btns[j].getAttribute("data-tab") === name);
+    }
+    document.querySelector("main").scrollTop = 0;
+  }
+
+  function api(path, body) {
+    var opt = { headers: { "X-Token": token } };
+    if (body !== undefined) {
+      opt.method = "POST";
+      opt.headers["Content-Type"] = "application/json";
+      opt.body = JSON.stringify(body);
+    }
+    return fetch(base.replace(/\/+$/, "") + path, opt).then(function (r) {
+      if (r.status === 401) throw new Error("Jeton incorrect");
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        if (!r.ok) throw new Error(data.error || "Erreur de requête");
+        return data;
+      });
+    });
+  }
+
+  /* ---------- affichage ---------- */
+
+  function setOffline() {
+    $("statusDot").className = "dot off";
+    $("statusText").textContent = "Hors ligne";
+    $("orb").className = "orb";
+    $("heroTitle").textContent = "Non connecté";
+    $("heroSub").textContent = "Ouvrez l’onglet Réglages pour vous connecter.";
+    $("powerBtn").textContent = "Se connecter";
+    $("powerBtn").className = "grad full";
+    $("powerBtn").style.marginTop = "0";
+  }
+
+  function renderKeywords(list) {
+    var box = $("kwList");
+    box.textContent = "";
+    if (!list.length) {
+      var e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = "Aucun mot-clé enregistré.";
+      box.appendChild(e);
+      return;
+    }
+    list.forEach(function (k) {
+      var row = document.createElement("div");
+      row.className = "kw";
+      var info = document.createElement("div");
+      var b = document.createElement("b");
+      b.textContent = k.keyword;
+      var p = document.createElement("p");
+      p.textContent = k.response;
+      info.appendChild(b);
+      info.appendChild(p);
+      var del = document.createElement("button");
+      del.className = "ghost small";
+      del.textContent = "Supprimer";
+      del.onclick = function () {
+        api("/api/keywords/delete", { keyword: k.keyword })
+          .then(function (s) { apply(s, false); toast("Mot-clé supprimé"); })
+          .catch(function (er) { toast(errText(er), true); });
+      };
+      row.appendChild(info);
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
+  var KIND_ICON = { "texte": "💬", "photo": "🖼️", "autocollant": "✨", "vidéo": "🎬", "vocal": "🎤", "fichier": "📎" };
+
+  function renderPack(pack) {
+    var box = $("packBox");
+    box.textContent = "";
+    $("clearPack").style.display = pack.length ? "block" : "none";
+    if (!pack.length) return;
+    pack.forEach(function (it, i) {
+      var row = document.createElement("div");
+      row.className = "item";
+      var ic = document.createElement("div");
+      ic.className = "ic";
+      ic.textContent = KIND_ICON[it.kind] || "📩";
+      var mid = document.createElement("div");
+      var b = document.createElement("b");
+      b.textContent = (i + 1) + ". " + it.kind.charAt(0).toUpperCase() + it.kind.slice(1);
+      var p = document.createElement("p");
+      p.textContent = it.text || "—";
+      mid.appendChild(b);
+      mid.appendChild(p);
+      row.appendChild(ic);
+      row.appendChild(mid);
+      if (it.custom_emoji) {
+        var bd = document.createElement("span");
+        bd.className = "badge";
+        bd.textContent = "Emoji premium";
+        row.appendChild(bd);
+      }
+      box.appendChild(row);
+    });
+  }
+
+  function renderImage(s) {
+    var box = $("imgBox");
+    if (!s.has_image) {
+      lastImgKb = -1;
+      box.textContent = "";
+      var sp = document.createElement("span");
+      sp.textContent = "Aucune image";
+      box.appendChild(sp);
+      return;
+    }
+    if (s.image_kb === lastImgKb) return;
+    lastImgKb = s.image_kb;
+    api("/api/image").then(function (d) {
+      box.textContent = "";
+      var im = document.createElement("img");
+      im.src = d.data;
+      im.alt = "Image jointe";
+      box.appendChild(im);
+    }).catch(function () {});
+  }
+
+  function apply(s, full) {
+    state = s; wasUp = true; hist(s); renderExtra(s);
+
+    $("statusDot").className = "dot " + (s.enabled ? "on" : "off");
+    $("statusText").textContent = s.enabled ? "Actif" : "En pause";
+    $("orb").className = "orb " + (s.enabled ? "on" : "off");
+    $("heroTitle").textContent = s.enabled ? "Réponses actives" : "Réponses en pause";
+    $("heroSub").textContent = "Une réponse par personne toutes les " + s.cooldown_hours + " h";
+    $("powerBtn").textContent = s.enabled ? "Désactiver les réponses" : "Activer les réponses";
+    $("powerBtn").className = (s.enabled ? "ghost" : "grad") + " full";
+    $("powerBtn").style.marginTop = "0";
+
+    $("stUsers").textContent = s.stats.users;
+    $("stMsgs").textContent = s.stats.messages;
+    $("stReplies").textContent = s.stats.replies;
+
+    renderKeywords(s.keywords);
+    renderPack(s.pack || []);
+    renderImage(s);
+
+    var f = document.activeElement && document.activeElement.id;
+    if (full || f !== "cooldown") $("cooldown").value = s.cooldown_hours;
+    if (full || f !== "autoMessage") { $("autoMessage").value = s.auto_message; updatePreview(); }
+    if (full || (f !== "schEnabled" && f !== "schStart" && f !== "schEnd")) {
+      $("schEnabled").checked = s.schedule_enabled;
+      $("schStart").value = s.schedule_start;
+      $("schEnd").value = s.schedule_end;
+    }
+  }
+
+  /* ---------- connexion ---------- */
+
+  function refresh(full) {
+    if (!base || !token) { setOffline(); return Promise.resolve(); }
+    return api("/api/state")
+      .then(function (s) { apply(s, full); })
+      .catch(function (e) { setOffline(); alertDown(); if (full) toast(errText(e), true); });
+  }
+
+  function startPolling() {
+    clearInterval(timer);
+    timer = setInterval(function () { refresh(false); }, 10000);
+  }
+
+  function save(settings, okMsg) {
+    api("/api/settings", { settings: settings })
+      .then(function (s) { apply(s, true); toast(okMsg || "Enregistré"); })
+      .catch(function (e) { toast(errText(e), true); });
+  }
+
+  /* ---------- image : redimensionnement avant envoi ---------- */
+
+  function prepareImage(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onerror = function () { reject(new Error("Lecture impossible")); };
+      fr.onload = function () {
+        var im = new Image();
+        im.onerror = function () { reject(new Error("Image illisible")); };
+        im.onload = function () {
+          var sc = 512 / Math.max(im.width, im.height);
+          var w = Math.max(1, Math.round(im.width * sc));
+          var h = Math.max(1, Math.round(im.height * sc));
+          var c = document.createElement("canvas");
+          c.width = w;
+          c.height = h;
+          var cx = c.getContext("2d");
+          cx.clearRect(0, 0, w, h);
+          cx.drawImage(im, 0, 0, w, h);
+          resolve({ data: c.toDataURL("image/webp", 0.92), w: w, h: h });
+        };
+        im.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- emojis premium ---------- */
+
+  var emojiThumbs = {};
+  var emojiSetsLoaded = false;
+
+  function updatePreview() {
+    var v = $("autoMessage").value;
+    var box = $("emojiPreview");
+    if (v.indexOf("[[e:") === -1) { box.style.display = "none"; return; }
+    box.style.display = "block";
+    box.textContent = "";
+    var re = /\[\[e:(\d+):([^\]]*)\]\]/g;
+    var pos = 0, m;
+    while ((m = re.exec(v)) !== null) {
+      if (m.index > pos) box.appendChild(document.createTextNode(v.slice(pos, m.index)));
+      if (emojiThumbs[m[1]]) {
+        var im = document.createElement("img");
+        im.src = emojiThumbs[m[1]];
+        im.alt = m[2];
+        box.appendChild(im);
+      } else {
+        box.appendChild(document.createTextNode(m[2] || "⭐"));
+      }
+      pos = m.index + m[0].length;
+    }
+    if (pos < v.length) box.appendChild(document.createTextNode(v.slice(pos)));
+  }
+
+  function insertAtCursor(text) {
+    var el = $("autoMessage");
+    var st = el.selectionStart || 0;
+    var en = el.selectionEnd || 0;
+    el.value = el.value.slice(0, st) + text + el.value.slice(en);
+    var p = st + text.length;
+    try { el.focus(); el.setSelectionRange(p, p); } catch (x) {}
+    updatePreview();
+  }
+
+  function renderEmojiGrid(items) {
+    var grid = $("emojiGrid");
+    grid.textContent = "";
+    if (!items.length) {
+      var e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = "Pack vide.";
+      grid.appendChild(e);
+      return;
+    }
+    items.forEach(function (it) {
+      if (it.thumb) emojiThumbs[it.id] = it.thumb;
+      var b = document.createElement("button");
+      if (it.thumb) {
+        var im = document.createElement("img");
+        im.src = it.thumb;
+        im.alt = it.alt;
+        b.appendChild(im);
+      } else {
+        b.textContent = it.alt;
+      }
+      b.onclick = function () { insertAtCursor("[[e:" + it.id + ":" + it.alt + "]]"); };
+      grid.appendChild(b);
+    });
+  }
+
+  function loadEmojiSet(id, btn) {
+    var chips = document.querySelectorAll("#emojiSets button");
+    for (var i = 0; i < chips.length; i++) chips[i].className = chips[i] === btn ? "sel" : "";
+    $("emojiGrid").textContent = "Chargement…";
+    api("/api/emoji/set?id=" + encodeURIComponent(id))
+      .then(function (d) { renderEmojiGrid(d.items || []); updatePreview(); })
+      .catch(function (e) { $("emojiGrid").textContent = ""; toast(errText(e), true); });
+  }
+
+  function loadEmojiSets() {
+    $("emojiSets").textContent = "Chargement…";
+    api("/api/emoji/sets").then(function (d) {
+      var box = $("emojiSets");
+      box.textContent = "";
+      var all = (d.mine || []).concat(d.featured || []);
+      if (!all.length) {
+        box.textContent = "Aucun pack d’emojis trouvé.";
+        return;
+      }
+      emojiSetsLoaded = true;
+      all.forEach(function (st, i) {
+        var b = document.createElement("button");
+        b.textContent = st.title;
+        b.onclick = function () { loadEmojiSet(st.id, b); };
+        box.appendChild(b);
+        if (i === 0) loadEmojiSet(st.id, b);
+      });
+    }).catch(function (e) { $("emojiSets").textContent = ""; toast(errText(e), true); });
+  }
+
+  /* ---------- événements ---------- */
+
+  var navBtns = document.querySelectorAll("nav button");
+  for (var i = 0; i < navBtns.length; i++) {
+    navBtns[i].onclick = function () { showTab(this.getAttribute("data-tab")); };
+  }
+
+  $("connectBtn").onclick = function () {
+    base = $("srvUrl").value.trim();
+    token = $("srvToken").value.trim();
+    if (!/^https?:\/\//i.test(base) || !token) {
+      toast("Renseignez l’adresse (http ou https) et le jeton", true);
+      return;
+    }
+    store.set("charara_url", base);
+    store.set("charara_token", token);
+    refresh(true).then(function () {
+      if (state) { toast("Connecté ✅"); showTab("home"); startPolling(); }
+    });
+  };
+
+  $("powerBtn").onclick = function () {
+    if (!state) { showTab("settings"); return; }
+    save({ enabled: state.enabled ? "0" : "1" }, state.enabled ? "Réponses désactivées" : "Réponses activées");
+  };
+
+  $("saveCooldown").onclick = function () {
+    var v = parseFloat($("cooldown").value);
+    if (isNaN(v) || v < 0) return toast("Nombre invalide", true);
+    save({ cooldown_hours: String(v) });
+  };
+
+  $("resetBtn").onclick = function () {
+    if (!confirm("Tout le monde pourra de nouveau recevoir une réponse. Continuer ?")) return;
+    api("/api/reset", {})
+      .then(function (s) { apply(s, false); toast("Délai réinitialisé"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  $("saveMessage").onclick = function () {
+    var m = $("autoMessage").value.trim();
+    if (!m) return toast("Le message est vide", true);
+    if ($("stdConv").checked) { m = toStd(m); $("autoMessage").value = m; updatePreview(); }
+    save({ auto_message: m }, "Message enregistré");
+  };
+
+  var hintTimer = null;
+  function clearHint() { clearTimeout(hintTimer); }
+  window.addEventListener("blur", clearHint);
+  document.addEventListener("visibilitychange", clearHint);
+
+  $("imgFile").onclick = function (ev) {
+    if (!state) { ev.preventDefault(); toast("Connectez-vous d’abord", true); return; }
+    clearHint();
+    hintTimer = setTimeout(function () {
+      toast("La galerie ne s’ouvre pas ? Voir Réglages → Accès aux photos", true);
+    }, 3000);
+  };
+
+  $("imgFile").onchange = function () {
+    clearHint();
+    var file = this.files && this.files[0];
+    this.value = "";
+    if (!file) return;
+    toast("Envoi de l’image…");
+    prepareImage(file)
+      .then(function (r) { return api("/api/image", { data: r.data, w: r.w, h: r.h }); })
+      .then(function (s) { lastImgKb = -1; apply(s, false); toast("Image enregistrée ✅"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  $("emojiToggle").onclick = function () {
+    if (!state) return toast("Connectez-vous d’abord", true);
+    var panel = $("emojiPanel");
+    var open = panel.style.display === "none";
+    panel.style.display = open ? "block" : "none";
+    if (open && !emojiSetsLoaded) loadEmojiSets();
+  };
+
+  $("autoMessage").addEventListener("input", updatePreview);
+
+  $("delImg").onclick = function () {
+    if (!state || !state.has_image) return toast("Aucune image à retirer", true);
+    api("/api/image/delete", {})
+      .then(function (s) { apply(s, false); toast("Image retirée"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  var segBtns = document.querySelectorAll("#seg button");
+  for (var k = 0; k < segBtns.length; k++) {
+    segBtns[k].onclick = function () {
+      importCount = parseInt(this.getAttribute("data-n"), 10);
+      for (var m = 0; m < segBtns.length; m++) segBtns[m].className = segBtns[m] === this ? "sel" : "";
+    };
+  }
+
+  $("importBtn").onclick = function () {
+    if (!state) return toast("Connectez-vous d’abord", true);
+    toast("Import en cours…");
+    api("/api/import", { count: importCount })
+      .then(function (s) { apply(s, false); toast("Import réussi ✅"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  $("clearPack").onclick = function () {
+    api("/api/pack/clear", {})
+      .then(function (s) { apply(s, false); toast("Import supprimé"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  $("addKw").onclick = function () {
+    var kw = $("kwWord").value.trim();
+    var rp = $("kwResp").value.trim();
+    if (!kw || !rp) return toast("Renseignez le mot-clé et la réponse", true);
+    api("/api/keywords/add", { keyword: kw, response: rp })
+      .then(function (s) { apply(s, false); $("kwWord").value = ""; $("kwResp").value = ""; toast("Mot-clé ajouté"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  $("saveSchedule").onclick = function () {
+    if (!$("schStart").value || !$("schEnd").value) return toast("Choisissez les deux heures", true);
+    save({
+      schedule_enabled: $("schEnabled").checked ? "1" : "0",
+      schedule_start: $("schStart").value,
+      schedule_end: $("schEnd").value
+    }, "Planning enregistré");
+  };
+
+  /* ---------- démarrage ---------- */
+
+  $("srvUrl").value = base;
+  $("srvToken").value = token;
+  setOffline();
+
+  if (base && token) {
+    refresh(true);
+    startPolling();
+  } else {
+    showTab("settings");
+  }
+
+  /* ---------- extensions ---------- */
+  var wasUp = false;
+  var L = function (k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+  var W = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+  function toStd(v) { return v.replace(/\[\[e:\d+:([^\]]*)\]\]/g, function (m, a) { return a || "⭐"; }); }
+  var STD = "😀 😁 😂 🤣 😊 😍 😘 😎 🤩 🥳 🤗 🤔 😉 🙏 👍 👏 🙌 💪 🔥 ✨ ⭐ 🌟 💯 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🎉 🎁 🌹 🌸 ☀️ 🌙 ⚡ 💬 📞 📍 ✅ ❗ ❓ 👋 🤝 😴 🕌 🤲 📿 🇹🇳 🚀 💎 👑".split(" ");
+  STD.forEach(function (e) {
+    var b = document.createElement("button");
+    b.textContent = e;
+    b.onclick = function () { insertAtCursor(e); };
+    $("stdGrid").appendChild(b);
+  });
+  $("stdConv").checked = L("stdConv", false);
+  $("stdConv").onchange = function () { W("stdConv", this.checked); };
+
+  function tplFill() {
+    var s = $("tplSel"); s.textContent = "";
+    L("tpls", []).forEach(function (x, i) {
+      var o = document.createElement("option"); o.value = i; o.textContent = x.n; s.appendChild(o);
+    });
+  }
+  tplFill();
+  $("tplSave").onclick = function () {
+    var m = $("autoMessage").value.trim(), n = $("tplName").value.trim();
+    if (!m || !n) return toast("Message et nom requis", true);
+    var t = L("tpls", []); t.push({ n: n, m: m }); W("tpls", t);
+    $("tplName").value = ""; tplFill(); toast("Modèle enregistré");
+  };
+  $("tplUse").onclick = function () {
+    var x = L("tpls", [])[$("tplSel").value];
+    if (!x) return toast("Aucun modèle", true);
+    if (!state) return toast("Connectez-vous d’abord", true);
+    $("autoMessage").value = x.m; updatePreview();
+    save({ auto_message: x.m }, "Modèle appliqué");
+  };
+  $("tplDel").onclick = function () {
+    var t = L("tpls", []); if (!t[$("tplSel").value]) return;
+    t.splice($("tplSel").value, 1); W("tpls", t); tplFill(); toast("Modèle supprimé");
+  };
+
+  function hist(s) {
+    var h = L("hist", []), n = Date.now(), l = h[h.length - 1];
+    if (!l || n - l.t > 3e5) { h.push({ t: n, m: s.stats.messages }); if (h.length > 300) h.shift(); W("hist", h); }
+    var d = [];
+    for (var i = 1; i < h.length; i++) d.push(Math.max(0, h[i].m - h[i - 1].m));
+    d = d.slice(-30);
+    var mx = Math.max.apply(null, d.concat(1));
+    var pts = d.map(function (v, i) { return Math.round(i * 300 / Math.max(d.length - 1, 1)) + "," + Math.round(50 - v / mx * 45); });
+    $("spark").innerHTML = d.length > 1 ? '<polyline fill="none" stroke="#35c6e8" stroke-width="2" points="' + pts.join(" ") + '"/>' : "";
+  }
+
+  $("notifOn").checked = L("notif", true);
+  $("notifOn").onchange = function () {
+    W("notif", this.checked);
+    try { if (this.checked && window.Notification) Notification.requestPermission(); } catch (e) {}
+  };
+  function alertDown() {
+    if (!wasUp || !L("notif", true)) return;
+    wasUp = false;
+    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+    toast("⚠️ Connexion au serveur perdue", true);
+    try { if (window.Notification && Notification.permission === "granted") new Notification("Charara AutoReply", { body: "Connexion au serveur perdue" }); } catch (e) {}
+  }
+
+  $("bkOut").onclick = function () {
+    if (!state) return toast("Connectez-vous d’abord", true);
+    var t = JSON.stringify({ v: 1, auto_message: state.auto_message, cooldown_hours: state.cooldown_hours, schedule_enabled: state.schedule_enabled, schedule_start: state.schedule_start, schedule_end: state.schedule_end, keywords: state.keywords, tpls: L("tpls", []) });
+    $("bkBox").value = t;
+    try { navigator.clipboard.writeText(t); } catch (e) {}
+    toast("Sauvegarde générée : copiez-la");
+  };
+  $("bkIn").onclick = function () {
+    var o; try { o = JSON.parse($("bkBox").value); } catch (e) { return toast("Texte invalide", true); }
+    if (!state) return toast("Connectez-vous d’abord", true);
+    if (o.tpls) { W("tpls", o.tpls); tplFill(); }
+    var ex = {}; state.keywords.forEach(function (k) { ex[k.keyword] = 1; });
+    save({ auto_message: o.auto_message, cooldown_hours: String(o.cooldown_hours), schedule_enabled: o.schedule_enabled ? "1" : "0", schedule_start: o.schedule_start, schedule_end: o.schedule_end });
+    (o.keywords || []).filter(function (k) { return !ex[k.keyword]; })
+      .reduce(function (p, k) { return p.then(function () { return api("/api/keywords/add", { keyword: k.keyword, response: k.response }); }); }, Promise.resolve())
+      .then(function () { return refresh(true); })
+      .then(function () { toast("Restauré ✅"); })
+      .catch(function (e) { toast(errText(e), true); });
+  };
+
+  function hp(p) {
+    return Promise.resolve().then(function () { return crypto.subtle.digest("SHA-256", new TextEncoder().encode("chr" + p)); })
+      .then(function (d) { return Array.from(new Uint8Array(d)).map(function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); })
+      .catch(function () { var x = 5381; for (var i = 0; i < p.length; i++) x = ((x * 33) ^ p.charCodeAt(i)) >>> 0; return "" + x; });
+  }
+  function lockNow() { if (L("pin", "")) { $("pinIn").value = ""; $("lock").className = "on"; } }
+  $("pinGo").onclick = function () {
+    hp($("pinIn").value).then(function (h) {
+      if (h === L("pin", "")) $("lock").className = ""; else toast("PIN incorrect", true);
+    });
+  };
+  $("pinSet").onclick = function () {
+    var v = $("pinNew").value;
+    if (!/^\d{4,8}$/.test(v)) return toast("PIN : 4 à 8 chiffres", true);
+    hp(v).then(function (h) { W("pin", h); $("pinNew").value = ""; toast("PIN activé 🔒"); });
+  };
+  $("pinOff").onclick = function () { W("pin", ""); toast("PIN retiré"); };
+  document.addEventListener("visibilitychange", function () { if (document.hidden) lockNow(); });
+  lockNow();
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+
+  /* ---------- journal, listes, planning ---------- */
+  var DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+  DAYS.forEach(function (n, i) {
+    var r = document.createElement("div");
+    r.className = "row2"; r.style.cssText = "align-items:center;margin-bottom:6px";
+    r.innerHTML = '<label style="display:flex;gap:6px;align-items:center;flex:1.3"><input type="checkbox" id="wk_on' + i + '" style="width:auto" checked>' + n + '</label><input type="time" id="wk_s' + i + '" value="08:00"><input type="time" id="wk_e' + i + '" value="23:00">';
+    $("weekBox").appendChild(r);
+  });
+
+  function renderList(list) {
+    var b = $("listBox"); b.textContent = "";
+    if (!list.length) { b.textContent = "Liste vide."; return; }
+    list.forEach(function (x) {
+      var r = document.createElement("div"); r.className = "kw";
+      var i = document.createElement("div"), t = document.createElement("b");
+      t.textContent = x.label || x.user_id; i.appendChild(t); r.appendChild(i);
+      var d = document.createElement("button"); d.className = "ghost small"; d.textContent = "Retirer";
+      d.onclick = function () {
+        api("/api/list/delete", { user_id: x.user_id }).then(function (s) { apply(s, false); }).catch(function (e) { toast(errText(e), true); });
+      };
+      r.appendChild(d); b.appendChild(r);
+    });
+  }
+
+  function renderExtra(s) {
+    var f = (document.activeElement && document.activeElement.id) || "";
+    if (f !== "awayMsg") $("awayMsg").value = s.away_message || "";
+    if (f !== "listMode") $("listMode").value = s.list_mode || "off";
+    var w = s.schedule_week || {};
+    if (f.indexOf("wk_") !== 0) {
+      for (var i = 0; i < 7; i++) {
+        var e = w[i]; if (!e) continue;
+        $("wk_on" + i).checked = e.on !== false;
+        $("wk_s" + i).value = e.start || "08:00";
+        $("wk_e" + i).value = e.end || "23:00";
+      }
+    }
+    renderList(s.list || []);
+  }
+
+  $("saveWeek").onclick = function () {
+    var o = {};
+    for (var i = 0; i < 7; i++) o[i] = { on: $("wk_on" + i).checked, start: $("wk_s" + i).value, end: $("wk_e" + i).value };
+    save({ schedule_week: JSON.stringify(o) }, "Planning par jour enregistré");
+  };
+  $("saveAway").onclick = function () { save({ away_message: $("awayMsg").value.trim() }, "Message d’absence enregistré"); };
+  $("listMode").onchange = function () { save({ list_mode: this.value }, "Mode enregistré"); };
+  $("listAdd").onclick = function () {
+    var v = $("listUser").value.trim();
+    if (!v) return toast("Saisissez un @username ou un ID", true);
+    api("/api/list/add", { user: v }).then(function (s) { apply(s, false); $("listUser").value = ""; toast("Ajouté"); }).catch(function (e) { toast(errText(e), true); });
+  };
+
+  function loadLogs() {
+    if (!state) return toast("Connectez-vous d’abord", true);
+    api("/api/logs").then(function (d) {
+      var b = $("logBox"); b.textContent = "";
+      var rows = d.logs || [];
+      if (!rows.length) { b.textContent = "Aucune activité."; return; }
+      rows.forEach(function (x) {
+        var r = document.createElement("div"); r.className = "kw";
+        var i = document.createElement("div"), h = document.createElement("b"), p = document.createElement("p");
+        var t = new Date(x.at);
+        h.textContent = (x.dir === "in" ? "📩 " : "📤 ") + (x.name || x.username || x.user_id) + " · " + t.toLocaleString([], { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        p.textContent = x.text;
+        i.appendChild(h); i.appendChild(p); r.appendChild(i);
+        if (x.dir === "in") {
+          var bt = document.createElement("button"); bt.className = "ghost small"; bt.textContent = "🚫";
+          bt.onclick = function () {
+            api("/api/list/add", { user: String(x.user_id) }).then(function (s) { apply(s, false); toast("Ajouté à la liste"); }).catch(function (e) { toast(errText(e), true); });
+          };
+          r.appendChild(bt);
+        }
+        b.appendChild(r);
+      });
+    }).catch(function (e) { toast(errText(e), true); });
+  }
+  $("logRefresh").onclick = loadLogs;
+  document.querySelector('nav button[data-tab="logs"]').addEventListener("click", loadLogs);
+})();
+</script>
+</body>
+</html>
