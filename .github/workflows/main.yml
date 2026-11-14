@@ -1,0 +1,103 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check files
+        run: |
+          test -f index.html || (echo "index.html est introuvable a la racine du depot" && exit 1)
+          test -f icon.png || (echo "icon.png est introuvable a la racine du depot" && exit 1)
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+
+      - name: Prepare web files
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+
+      - name: Capacitor config
+        run: |
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.charara.autoreply",
+            "appName": "Charara-AutoReply",
+            "webDir": "www",
+            "server": {
+              "androidScheme": "http",
+              "cleartext": true
+            }
+          }
+          EOF
+
+      - name: Add Android project
+        run: npx cap add android
+
+      - name: App icon
+        run: |
+          pip install pillow
+          python3 - <<'PY'
+          import os, shutil
+          from PIL import Image
+          res = "android/app/src/main/res"
+          shutil.rmtree(os.path.join(res, "mipmap-anydpi-v26"), ignore_errors=True)
+          sizes = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
+          src = Image.open("icon.png").convert("RGBA")
+          for density, px in sizes.items():
+              folder = os.path.join(res, "mipmap-" + density)
+              os.makedirs(folder, exist_ok=True)
+              img = src.resize((px, px), Image.LANCZOS)
+              for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+                  img.save(os.path.join(folder, name))
+          PY
+
+      - name: Manifest (http + photos)
+        run: |
+          python3 - <<'PY'
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p, encoding="utf-8").read()
+          if "usesCleartextTraffic" not in s:
+              s = s.replace("<application", '<application android:usesCleartextTraffic="true"', 1)
+          add = ""
+          if "READ_MEDIA_IMAGES" not in s:
+              add += '    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n'
+          if "READ_EXTERNAL_STORAGE" not in s:
+              add += '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n'
+          s = s.replace("</manifest>", add + "</manifest>")
+          open(p, "w", encoding="utf-8").write(s)
+          PY
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Charara-AutoReply-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
